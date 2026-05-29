@@ -1,0 +1,18 @@
+services:
+  bot:
+    build: .
+    image: vpn-payment-bot:latest
+    container_name: vpn-payment-bot
+    restart: unless-stopped
+    # Переменные из .env (BOT_TOKEN, REMNAWAVE_*, PAYMENT_URL, ...).
+    # pydantic-settings читает их из окружения по UPPER_CASE-именам.
+    env_file:
+      - .env
+    # Корректное завершение polling по SIGTERM.
+    stop_grace_period: 15s
+    # Ротация логов, чтобы они не росли бесконечно на сервере.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
