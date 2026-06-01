@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     # Прочее
     payment_url: str = Field(default="https://aiyl-bank.ru/checkout", alias="PAYMENT_URL")
     support_url: str = Field(default="", alias="SUPPORT_URL")
+    feedback_url: str = Field(default="", alias="FEEDBACK_URL")
     brand_name: str = Field(default="Nimbus", alias="BRAND_NAME")
 
     @field_validator("remnawave_base_url")
@@ -38,7 +39,7 @@ class Settings(BaseSettings):
             return ""
         return value
 
-    @field_validator("payment_url", "support_url")
+    @field_validator("payment_url", "support_url", "feedback_url")
     @classmethod
     def _strip(cls, value: str) -> str:
         return (value or "").strip()
