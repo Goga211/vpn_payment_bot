@@ -1,15 +1,29 @@
 """Inline-клавиатуры бота."""
 from __future__ import annotations
 
-from aiogram.types import InlineKeyboardMarkup
+from aiogram.types import InlineKeyboardMarkup, WebAppInfo
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from .config import Settings
 
 
+def _webapp_button_kwargs(url: str) -> dict:
+    """Кнопка с сайтом: web_app для HTTPS (открывается внутри Telegram), иначе обычная ссылка.
+
+    Telegram разрешает WebApp-кнопки только для HTTPS-URL, поэтому для не-HTTPS
+    (например, локального теста) откатываемся на обычную url-кнопку.
+    """
+    if url.lower().startswith("https://"):
+        return {"web_app": WebAppInfo(url=url)}
+    return {"url": url}
+
+
 def main_menu(settings: Settings) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    kb.button(text="🎁 Попробовать бесплатно", callback_data="help_connect")
+    kb.button(
+        text="🎁 Попробовать бесплатно",
+        **_webapp_button_kwargs(settings.payment_url),
+    )
     kb.button(text="👤 Личный кабинет", callback_data="account")
     feedback_url = settings.feedback_url or settings.support_url
     if feedback_url:
@@ -33,7 +47,10 @@ def account_menu(
         kb.button(text="🔄 Обновить", callback_data="account")
         kb.button(text="🎁 Как подключить", callback_data="help_connect")
     else:
-        kb.button(text="🎁 Попробовать бесплатно", callback_data="help_connect")
+        kb.button(
+            text="🎁 Попробовать бесплатно",
+            **_webapp_button_kwargs(settings.payment_url),
+        )
         kb.button(text="🔄 Обновить", callback_data="account")
     kb.button(text="⬅️ В меню", callback_data="menu")
     kb.adjust(1)
