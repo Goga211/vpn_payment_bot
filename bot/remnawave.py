@@ -99,6 +99,48 @@ class RemnawaveUser:
         return int(delta.total_seconds() // 86400)
 
 
+@dataclass(slots=True)
+class RemnawaveDevice:
+    """Одно устройство (HWID), на котором активирована подписка."""
+
+    hwid: str = ""
+    platform: str = ""
+    device_model: str = ""
+    os_version: str = ""
+    created_at: datetime | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "RemnawaveDevice":
+        return cls(
+            hwid=str(data.get("hwid") or ""),
+            platform=str(data.get("platform") or ""),
+            device_model=str(data.get("deviceModel") or ""),
+            os_version=str(data.get("osVersion") or ""),
+            created_at=_parse_iso(data.get("createdAt")),
+        )
+
+
+def _extract_devices(payload: Any) -> list[RemnawaveDevice]:
+    """Достаёт список устройств, устойчиво к форме ответа (list / {devices:[]} / {response:{...}})."""
+    response = payload.get("response", payload) if isinstance(payload, dict) else payload
+
+    if isinstance(response, list):
+        items = response
+    elif isinstance(response, dict):
+        if isinstance(response.get("devices"), list):
+            items = response["devices"]
+        else:
+            items = [response]
+    else:
+        items = []
+
+    return [
+        RemnawaveDevice.from_dict(item)
+        for item in items
+        if isinstance(item, dict) and item.get("hwid")
+    ]
+
+
 def _extract_users(payload: Any) -> list[RemnawaveUser]:
     """Достаёт список пользователей из ответа, устойчиво к форме (list / dict / {users:[]})."""
     response = payload.get("response", payload) if isinstance(payload, dict) else payload
@@ -155,6 +197,26 @@ class RemnawaveClient:
         if payload is None:
             return []
         return _extract_users(payload)
+
+    async def get_devices(self, user_uuid: str) -> list[RemnawaveDevice]:
+        """Список устройств (HWID), на которых активирована подписка пользователя."""
+        if not user_uuid:
+            return []
+        payload = await self._request("GET", f"/api/hwid/devices/{user_uuid}")
+        if payload is None:
+            return []
+        return _extract_devices(payload)
+
+    async def delete_device(self, user_uuid: str, hwid: str) -> bool:
+        """Удаляет одно устройство пользователя. True — если запрос прошёл без ошибки."""
+        if not (user_uuid and hwid):
+            return False
+        await self._request(
+            "POST",
+            "/api/hwid/devices/delete",
+            json={"userUuid": user_uuid, "hwid": hwid},
+        )
+        return True
 
     # --- внутреннее ---
 

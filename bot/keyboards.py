@@ -5,6 +5,7 @@ from aiogram.types import InlineKeyboardMarkup, WebAppInfo
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from .config import Settings
+from .remnawave import RemnawaveDevice
 
 
 def _webapp_button_kwargs(url: str) -> dict:
@@ -39,11 +40,14 @@ def account_menu(
     *,
     subscription_url: str | None = None,
     found: bool = False,
+    show_devices: bool = False,
 ) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     if found:
         if subscription_url and subscription_url.lower().startswith("http"):
             kb.button(text="🌐 Открыть страницу подписки", url=subscription_url)
+        if show_devices:
+            kb.button(text="📱 Мои устройства", callback_data="devices")
         kb.button(text="🔄 Обновить", callback_data="account")
         kb.button(text="🎁 Как подключить", callback_data="help_connect")
     else:
@@ -53,6 +57,18 @@ def account_menu(
         )
         kb.button(text="🔄 Обновить", callback_data="account")
     kb.button(text="⬅️ В меню", callback_data="menu")
+    kb.adjust(1)
+    return kb.as_markup()
+
+
+def devices_menu(devices: list[RemnawaveDevice]) -> InlineKeyboardMarkup:
+    """Список устройств с кнопкой удаления для каждого (по порядковому номеру)."""
+    kb = InlineKeyboardBuilder()
+    for index in range(len(devices)):
+        kb.button(text=f"❌ Удалить {index + 1}", callback_data=f"devdel:{index}")
+    if devices:
+        kb.button(text="🔄 Обновить", callback_data="devices")
+    kb.button(text="⬅️ Назад в кабинет", callback_data="account")
     kb.adjust(1)
     return kb.as_markup()
 

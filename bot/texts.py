@@ -4,7 +4,7 @@ from __future__ import annotations
 import html
 from datetime import timezone
 
-from .remnawave import RemnawaveUser
+from .remnawave import RemnawaveDevice, RemnawaveUser
 
 STATUS_LABELS = {
     "ACTIVE": "🟢 активна",
@@ -84,6 +84,71 @@ def _format_user(user: RemnawaveUser) -> str:
         lines.append(f"<b>Ссылка-подписка:</b>\n<code>{safe_url}</code>")
 
     return "\n".join(lines)
+
+
+# Иконка + понятное имя платформы по техническому коду из заголовка устройства.
+_PLATFORM_LABELS = {
+    "ios": "📱 iPhone / iPad",
+    "iphone": "📱 iPhone",
+    "ipad": "📱 iPad",
+    "android": "🤖 Android",
+    "windows": "🖥 Windows",
+    "win": "🖥 Windows",
+    "macos": "💻 Mac",
+    "mac": "💻 Mac",
+    "darwin": "💻 Mac",
+    "linux": "🐧 Linux",
+}
+
+
+def device_name(device: RemnawaveDevice, index: int) -> str:
+    """Дружелюбное имя устройства — только платформа и модель, без технических ID."""
+    platform = _PLATFORM_LABELS.get(device.platform.strip().lower())
+    if not platform and device.platform:
+        platform = f"📱 {html.escape(device.platform.strip())}"
+
+    model = device.device_model.strip()
+    if platform and model and model.lower() not in platform.lower():
+        return f"{platform} · {html.escape(model)}"
+    if platform:
+        return platform
+    if model:
+        return f"📱 {html.escape(model)}"
+    return f"📱 Устройство {index}"
+
+
+def devices(items: list[RemnawaveDevice]) -> str:
+    if not items:
+        return (
+            "📱 <b>Мои устройства</b>\n\n"
+            "Пока ни одного активного устройства не подключено.\n"
+            "Устройство появится здесь после первого подключения по подписке."
+        )
+
+    lines = [
+        "📱 <b>Мои устройства</b>",
+        "",
+        f"Сейчас подключено: <b>{len(items)}</b>",
+        "",
+    ]
+    for i, device in enumerate(items, 1):
+        line = f"{i}. {device_name(device, i)}"
+        if device.created_at:
+            added = device.created_at.astimezone(timezone.utc).strftime("%d.%m.%Y")
+            line += f"\n   <i>добавлено {added}</i>"
+        lines.append(line)
+
+    lines.append("")
+    lines.append(
+        "Чтобы отключить устройство — нажмите кнопку <b>«❌ Удалить»</b> под нужным номером."
+    )
+    return "\n".join(lines)
+
+
+DEVICE_DELETED = "✅ Устройство отключено."
+DEVICE_DELETE_FAILED = (
+    "⚠️ Не удалось отключить устройство. Попробуйте ещё раз чуть позже."
+)
 
 
 def account(users: list[RemnawaveUser]) -> str:
