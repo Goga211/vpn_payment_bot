@@ -106,7 +106,6 @@ class RemnawaveDevice:
     hwid: str = ""
     platform: str = ""
     device_model: str = ""
-    os_version: str = ""
     created_at: datetime | None = None
 
     @classmethod
@@ -115,7 +114,6 @@ class RemnawaveDevice:
             hwid=str(data.get("hwid") or ""),
             platform=str(data.get("platform") or ""),
             device_model=str(data.get("deviceModel") or ""),
-            os_version=str(data.get("osVersion") or ""),
             created_at=_parse_iso(data.get("createdAt")),
         )
 
@@ -207,16 +205,15 @@ class RemnawaveClient:
             return []
         return _extract_devices(payload)
 
-    async def delete_device(self, user_uuid: str, hwid: str) -> bool:
-        """Удаляет одно устройство пользователя. True — если запрос прошёл без ошибки."""
+    async def delete_device(self, user_uuid: str, hwid: str) -> None:
+        """Удаляет одно устройство пользователя (бросает RemnawaveError при сбое)."""
         if not (user_uuid and hwid):
-            return False
+            return
         await self._request(
             "POST",
             "/api/hwid/devices/delete",
             json={"userUuid": user_uuid, "hwid": hwid},
         )
-        return True
 
     # --- внутреннее ---
 
